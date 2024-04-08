@@ -2,12 +2,12 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 bindir = @bindir@
 
-controller: controller.c
-	$(CC) -Wall -O3 -o controller controller.c `pkg-config --cflags --libs libsystemd`
+xmrig-switch: controller.c
+	$(CC) -Wall -O3 -o xmrig-switch controller.c `pkg-config --cflags --libs libsystemd`
 
 clean:
-	rm -f controller
+	rm -f xmrig-switch
 
-install: controller
+install: xmrig-switch
 	install -d $(bindir)
-	install -t $(bindir) controller
+	install -t $(bindir) xmrig-switch

@@ -1,0 +1,13 @@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir = @bindir@
+
+controller: controller.c
+	$(CC) -Wall -O3 -o controller controller.c `pkg-config --cflags --libs libsystemd`
+
+clean:
+	rm -f controller
+
+install: controller
+	install -d $(bindir)
+	install -t $(bindir) controller

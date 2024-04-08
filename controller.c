@@ -191,8 +191,6 @@ int run(char* port) {
 }
 
 int main(int argc, char* argv[]) {
-	printf("Hello, world!");
-	return 0;
 	if (argc != 2) {
 		printf("Usage: ");
 		printf("%s", argv[0]);

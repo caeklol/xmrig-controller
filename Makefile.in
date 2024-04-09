@@ -3,7 +3,7 @@ exec_prefix = @exec_prefix@
 bindir = @bindir@
 
 xmrig-switch: controller.c
-	$(CC) -Wall -O3 -o xmrig-switch controller.c `pkg-config --cflags --libs libsystemd`
+	$(CC) -Wall -O3 -o xmrig-switch controller.c `pkg-config --cflags --libs libsystemd libudev`
 
 clean:
 	rm -f xmrig-switch

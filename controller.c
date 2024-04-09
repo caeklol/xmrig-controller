@@ -5,7 +5,9 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <assert.h> // TODO: Remove
 #include <systemd/sd-bus.h>
+#include <libudev.h>
 
 // https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 int set_interface_attribs(int fd, int speed, int parity) {
@@ -190,14 +192,83 @@ int run(char* port) {
 	return r;
 }
 
-int main(int argc, char* argv[]) {
-	if (argc != 2) {
-		printf("Usage: ");
-		printf("%s", argv[0]);
-		printf(" /dev/ttyUSB1\n");
-	} else {
-		int res = run(argv[1]);
-		printf("Error: %s\n", strerror(res * -1));
-		return res;
+int wait_for_device(char** port) {
+	struct udev *udev;
+    struct udev_enumerate *enumerate;
+    struct udev_list_entry *devices, *dev_list_entry;
+    struct udev_device *dev;
+    const char *path = NULL;
+	int res = -6;
+
+    udev = udev_new();
+    if (!udev) {
+        return -11;
+    }
+
+    enumerate = udev_enumerate_new(udev);
+    if (!enumerate) {
+        udev_unref(udev);
+        return -11;
+    }
+
+    udev_enumerate_add_match_subsystem(enumerate, "tty");
+    udev_enumerate_add_match_property(enumerate, "ID_VENDOR_ID", "2341"); // arduino micro
+    udev_enumerate_add_match_property(enumerate, "ID_MODEL_ID", "8037");
+    udev_enumerate_scan_devices(enumerate);
+
+    devices = udev_enumerate_get_list_entry(enumerate);
+
+    udev_list_entry_foreach(dev_list_entry, devices) {
+        const char *path_tmp;
+
+        path_tmp = udev_list_entry_get_name(dev_list_entry);
+        dev = udev_device_new_from_syspath(udev, path_tmp);
+
+        path = udev_device_get_devnode(dev);
+        if (path) {
+			res = 0;
+            break;
+        }
+
+        udev_device_unref(dev);
+    }
+
+    udev_enumerate_unref(enumerate);
+    udev_unref(udev);
+
+	if (res >= 0) {
+		*port = (char*) malloc(strlen(path) + 1);
+		strcpy(*port, path);
 	}
+
+	return res;
+}
+
+int main(int argc, char* argv[]) {
+	int firstLaunch = 1;
+	while (1) {
+		if (!firstLaunch) {
+			printf("Retrying in 5s...\n");
+			usleep(1000 * 5000);
+		} else {
+			firstLaunch = 0;
+		}
+
+		char* port;
+
+		int res = wait_for_device(&port); // allocates memory for port !!!
+		if (res < 0) {
+			printf("Error finding arduino: %s\n", strerror(res * -1));
+			continue;
+		}
+
+		printf("Detected port: %s\n", port);
+
+		res = run(port);
+		free(port);
+
+		printf("Error while listening to serial port: %s\n", strerror(res * -1));
+	}
+
+	return 0;
 }

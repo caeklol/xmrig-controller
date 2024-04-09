@@ -3,6 +3,8 @@ const byte ledPin = 7;
 volatile byte state = digitalRead(switchPin);
 volatile byte setupComplete = false;
 
+int n = 0;
+
 void setup() {
   Serial.begin(9600);
   pinMode(switchPin, INPUT_PULLUP);
@@ -13,8 +15,9 @@ void setup() {
 }
 
 void loop() {
-  delay(100);
-    if (Serial.available() > 0) {
+  delay(10);
+  n += 1;
+  if (Serial.available() > 0) {
     char byte = Serial.read();
     if (byte == '0') {
       digitalWrite(ledPin, LOW);
@@ -22,7 +25,10 @@ void loop() {
       digitalWrite(ledPin, HIGH);
     }
   }
-  Serial.print(state);
+  if (n == 15) {
+    Serial.print(state);
+    n = 0;
+  }
 }
 
 void switchFlipped() {

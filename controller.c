@@ -5,10 +5,33 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <assert.h> // TODO: Remove
 #include <systemd/sd-bus.h>
 #include <libudev.h>
+#include <time.h>  
+#include <errno.h>    
 
+// https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
+/* msleep(): Sleep for the requested number of milliseconds. */
+int msleep(long msec)
+{
+    struct timespec ts;
+    int res;
+
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
 // https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
 int set_interface_attribs(int fd, int speed, int parity) {
 	struct termios tty;
@@ -117,7 +140,7 @@ int status_xmrig(sd_bus** bus, sd_bus_error* error) {
 
 
 	if (r < 0) {
-		//sd_bus_message_unref(m);
+		sd_bus_message_unref(m);
 		if (strstr(error->message, "xmrig.service not loaded") != NULL) {
 			*error = SD_BUS_ERROR_NULL;
 			return 0; // not running
@@ -125,8 +148,7 @@ int status_xmrig(sd_bus** bus, sd_bus_error* error) {
 			return -1; //actual error;
 		}
 	} else {
- 		r = sd_bus_message_read(m, "o", &status);
-		//sd_bus_message_unref(m);
+		sd_bus_message_unref(m);
 		if (r < 0) return -2;
 		return 1; // running
 	}
@@ -149,7 +171,10 @@ int run(char* port) {
 		return r;
     }
 
+	clock_t s, n;
+
 	while (1) {
+		s = clock();
 		char buf[1];
 
 		r = read(fd, buf, sizeof buf);
@@ -187,11 +212,21 @@ int run(char* port) {
 			fprintf(stderr, "Sync failed\n");
 			break;
 		}
+
+		n = clock();
+		if ((n-s) < 500) {
+			int r = msleep((long)(n-s));
+			if (r < 0) fprintf(stderr, "WARNING: Failed to sleep! systemd may be overloaded - sync delay might be longer\n");
+		}
 	}
+
+	sd_bus_unref(bus);
+	sd_bus_error_free(&error);
 
 	return r;
 }
 
+// stolen from somewhere ican't remember
 int wait_for_device(char** port) {
 	struct udev *udev;
     struct udev_enumerate *enumerate;

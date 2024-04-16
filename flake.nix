@@ -20,7 +20,7 @@
       xmrig-switch = with final;
         stdenv.mkDerivation rec {
           pname = "xmrig-switch";
-          version = "1";
+          version = "3";
 
           src = ./.;
           buildInputs = with pkgs; [

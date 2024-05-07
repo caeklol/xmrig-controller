@@ -3,13 +3,14 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
   };
 
-  outputs = inputs @ {flake-parts, ...}:
+  outputs = inputs @ { self, flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = ["x86_64-linux" "aarch64-linux"];
 
@@ -29,9 +30,9 @@
       };
 
       flake = {
-        homeManagerModules = rec {
-          xmrig-switch = import ./hm.nix inputs.self;
-          default = xmrig-switch;
+        nixosModules = {
+          xmrig-switch = import ./module.nix;
+          default = self.nixosModules.xmrig-switch;
         };
       };
     };

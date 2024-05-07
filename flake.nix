@@ -1,41 +1,38 @@
-# Use `nix run .`
 {
-  description = "XMRig Switch Flake for development";
-  inputs.nixpkgs.url = "nixpkgs/nixos-23.11";
+  description = "";
 
-  outputs = {
-    self,
-    nixpkgs,
-  }: let
-    supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-    nixpkgsFor = forAllSystems (system:
-      import nixpkgs {
-        inherit system;
-        overlays = [self.overlay];
-      });
-  in {
-    formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.alejandra;
-    overlay = final: prev: {
-      xmrig-switch = with final;
-        stdenv.mkDerivation rec {
-          pname = "xmrig-switch";
-          version = "3";
-
-          src = ./.;
-          buildInputs = with pkgs; [
-            systemdLibs
-			libudev-zero
-            pkg-config
-          ];
-
-          nativeBuildInputs = [autoreconfHook];
-        };
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
     };
-    packages = forAllSystems (system: {
-      inherit (nixpkgsFor.${system}) xmrig-switch;
-    });
-
-    defaultPackage = forAllSystems (system: self.packages.${system}.xmrig-switch);
   };
+
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = ["x86_64-linux" "aarch64-linux"];
+
+      perSystem = {
+        pkgs,
+        system,
+        ...
+      }: let
+        xmrig-switch = pkgs.callPackage ./. {};
+      in {
+        formatter = pkgs.alejandra;
+
+        packages = {
+          default = xmrig-switch;
+          inherit xmrig-switch;
+        };
+      };
+
+      flake = {
+        homeManagerModules = rec {
+          xmrig-switch = import ./hm.nix inputs.self;
+          default = xmrig-switch;
+        };
+      };
+    };
 }

@@ -1,4 +1,4 @@
-AC_INIT([Hello], 1.0)
+AC_INIT([XMRig], 1.0)
 AC_PROG_CC
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT

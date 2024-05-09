@@ -35,7 +35,7 @@
 
       flake = {
         nixosModules = {
-          xmrig-switch = import ./module.nix;
+          xmrig-switch = import ./module.nix inputs.self;
           default = self.nixosModules.xmrig-switch;
         };
       };
